@@ -1,4 +1,4 @@
-# Game Naam
+# The Christmas Game
 
 Welkom bij **ChristmasGame**! Dit spel is ontwikkeld met Unity en is beschikbaar voor macOS. Volg de onderstaande stappen om het spel te spelen.
 
