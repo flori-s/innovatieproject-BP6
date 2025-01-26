@@ -28,6 +28,10 @@ Welkom bij **ChristmasGame**! Dit spel is ontwikkeld met Unity en is beschikbaar
 4. **Speel het spel**:
    - Zodra het spel is geopend, kun je beginnen met spelen!
    - Volg de aanwijzingen in het spel en geniet van je ervaring.
+  
+5. **Spel afsluiten**
+   - Het is nog niet mogelijk om het spel af te sluiten via de window zelf, je zult daarom het spel moeten afsluiten door de applicatie te quitten.
+   - Dit doe je door de met je rechter muisknop op de applicatie te drukken en vervolgens druk je op **"Quit"**
 
 ## Besturing
 
