@@ -3,144 +3,142 @@ using UnityEngine.Events;
 
 public class CharacterController2D : MonoBehaviour
 {
-	[SerializeField] private float m_JumpForce = 400f;							// Amount of force added when the player jumps.
-	[Range(0, 1)] [SerializeField] private float m_CrouchSpeed = .36f;			// Amount of maxSpeed applied to crouching movement. 1 = 100%
-	[Range(0, .3f)] [SerializeField] private float m_MovementSmoothing = .05f;	// How much to smooth out the movement
-	[SerializeField] private bool m_AirControl = false;							// Whether or not a player can steer while jumping;
-	[SerializeField] private LayerMask m_WhatIsGround;							// A mask determining what is ground to the character
-	[SerializeField] private Transform m_GroundCheck;							// A position marking where to check if the player is grounded.
-	[SerializeField] private Transform m_CeilingCheck;							// A position marking where to check for ceilings
-	[SerializeField] private Collider2D m_CrouchDisableCollider;				// A collider that will be disabled when crouching
+    [SerializeField] private float m_JumpForce = 400f;							// Hoeveel kracht er wordt toegevoegd wanneer de speler springt.
+    [Range(0, 1)] [SerializeField] private float m_CrouchSpeed = .36f;			// Het percentage van de maximale snelheid toegepast op het kruipen. 1 = 100%
+    [Range(0, .3f)] [SerializeField] private float m_MovementSmoothing = .05f;	// Hoeveel de beweging moet worden gesmeed (versoepeld)
+    [SerializeField] private bool m_AirControl = false;							// Of de speler de beweging kan sturen terwijl hij springt
+    [SerializeField] private LayerMask m_WhatIsGround;							// Een masker om te bepalen wat grond is voor de speler
+    [SerializeField] private Transform m_GroundCheck;							// Een positie om te controleren of de speler op de grond staat.
+    [SerializeField] private Transform m_CeilingCheck;							// Een positie om te controleren voor een plafond
+    [SerializeField] private Collider2D m_CrouchDisableCollider;				// Een collider die uitgeschakeld wordt tijdens het kruipen
 
-	const float k_GroundedRadius = .2f; // Radius of the overlap circle to determine if grounded
-	private bool m_Grounded;            // Whether or not the player is grounded.
-	const float k_CeilingRadius = .2f; // Radius of the overlap circle to determine if the player can stand up
-	private Rigidbody2D m_Rigidbody2D;
-	private bool m_FacingRight = true;  // For determining which way the player is currently facing.
-	private Vector3 m_Velocity = Vector3.zero;
+    const float k_GroundedRadius = .2f; // Straal van de overlapcirkel om te controleren of de speler op de grond staat
+    private bool m_Grounded;            // Of de speler op de grond staat
+    const float k_CeilingRadius = .2f; // Straal van de overlapcirkel om te controleren of de speler rechtop kan staan
+    private Rigidbody2D m_Rigidbody2D;
+    private bool m_FacingRight = true;  // Om te bepalen welke kant de speler op kijkt
+    private Vector3 m_Velocity = Vector3.zero;
 
-	[Header("Events")]
-	[Space]
+    [Header("Events")]
+    [Space]
 
-	public UnityEvent OnLandEvent;
+    public UnityEvent OnLandEvent; // Event voor wanneer de speler landt
 
-	[System.Serializable]
-	public class BoolEvent : UnityEvent<bool> { }
+    [System.Serializable]
+    public class BoolEvent : UnityEvent<bool> { }
 
-	public BoolEvent OnCrouchEvent;
-	private bool m_wasCrouching = false;
+    public BoolEvent OnCrouchEvent; // Event voor wanneer de speler begint of stopt met kruipen
+    private bool m_wasCrouching = false; // Bijhouden of de speler bezig is met kruipen
 
-	private void Awake()
-	{
-		m_Rigidbody2D = GetComponent<Rigidbody2D>();
+    private void Awake()
+    {
+        m_Rigidbody2D = GetComponent<Rigidbody2D>();
 
-		if (OnLandEvent == null)
-			OnLandEvent = new UnityEvent();
+        if (OnLandEvent == null)
+            OnLandEvent = new UnityEvent();
 
-		if (OnCrouchEvent == null)
-			OnCrouchEvent = new BoolEvent();
-	}
+        if (OnCrouchEvent == null)
+            OnCrouchEvent = new BoolEvent();
+    }
 
-	private void FixedUpdate()
-	{
-		bool wasGrounded = m_Grounded;
-		m_Grounded = false;
+    private void FixedUpdate()
+    {
+        bool wasGrounded = m_Grounded;
+        m_Grounded = false;
 
-		// The player is grounded if a circlecast to the groundcheck position hits anything designated as ground
-		// This can be done using layers instead but Sample Assets will not overwrite your project settings.
-		Collider2D[] colliders = Physics2D.OverlapCircleAll(m_GroundCheck.position, k_GroundedRadius, m_WhatIsGround);
-		for (int i = 0; i < colliders.Length; i++)
-		{
-			if (colliders[i].gameObject != gameObject)
-			{
-				m_Grounded = true;
-				if (!wasGrounded)
-					OnLandEvent.Invoke();
-			}
-		}
-	}
+        // De speler is op de grond als een cirkelcast naar de grondcheckpositie iets raakt dat als grond is gemarkeerd
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(m_GroundCheck.position, k_GroundedRadius, m_WhatIsGround);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            if (colliders[i].gameObject != gameObject)
+            {
+                m_Grounded = true;
+                if (!wasGrounded)
+                    OnLandEvent.Invoke(); // Roept het landingsevent aan wanneer de speler op de grond komt
+            }
+        }
+    }
 
+    public void Move(float move, bool crouch, bool jump)
+    {
+        // Als de speler niet kruipt, controleren of de speler kan opstaan
+        if (!crouch)
+        {
+            // Als er een plafond is dat het rechtop staan van de speler blokkeert, blijft de speler kruipen
+            if (Physics2D.OverlapCircle(m_CeilingCheck.position, k_CeilingRadius, m_WhatIsGround))
+            {
+                crouch = true;
+            }
+        }
 
-	public void Move(float move, bool crouch, bool jump)
-	{
-		// If crouching, check to see if the character can stand up
-		if (!crouch)
-		{
-			// If the character has a ceiling preventing them from standing up, keep them crouching
-			if (Physics2D.OverlapCircle(m_CeilingCheck.position, k_CeilingRadius, m_WhatIsGround))
-			{
-				crouch = true;
-			}
-		}
+        // Alleen de speler besturen als hij op de grond staat of als airControl is ingeschakeld
+        if (m_Grounded || m_AirControl)
+        {
+            // Als de speler kruipt
+            if (crouch)
+            {
+                if (!m_wasCrouching)
+                {
+                    m_wasCrouching = true;
+                    OnCrouchEvent.Invoke(true); // Roept het crouch-event aan
+                }
 
-		//only control the player if grounded or airControl is turned on
-		if (m_Grounded || m_AirControl)
-		{
+                // Verminder de snelheid door de crouchSpeed-multiplier toe te passen
+                move *= m_CrouchSpeed;
 
-			// If crouching
-			if (crouch)
-			{
-				if (!m_wasCrouching)
-				{
-					m_wasCrouching = true;
-					OnCrouchEvent.Invoke(true);
-				}
+                // Zet de collider uit tijdens het kruipen
+                if (m_CrouchDisableCollider != null)
+                    m_CrouchDisableCollider.enabled = false;
+            } 
+            else
+            {
+                // Zet de collider aan wanneer de speler niet meer kruipt
+                if (m_CrouchDisableCollider != null)
+                    m_CrouchDisableCollider.enabled = true;
 
-				// Reduce the speed by the crouchSpeed multiplier
-				move *= m_CrouchSpeed;
+                if (m_wasCrouching)
+                {
+                    m_wasCrouching = false;
+                    OnCrouchEvent.Invoke(false); // Roept het crouch-event aan wanneer de speler stopt met kruipen
+                }
+            }
 
-				// Disable one of the colliders when crouching
-				if (m_CrouchDisableCollider != null)
-					m_CrouchDisableCollider.enabled = false;
-			} else
-			{
-				// Enable the collider when not crouching
-				if (m_CrouchDisableCollider != null)
-					m_CrouchDisableCollider.enabled = true;
+            // Beweeg de speler door de doel snelheid te berekenen
+            Vector3 targetVelocity = new Vector2(move * 10f, m_Rigidbody2D.velocity.y);
+            // Versoepel de snelheid en pas deze toe op de speler
+            m_Rigidbody2D.velocity = Vector3.SmoothDamp(m_Rigidbody2D.velocity, targetVelocity, ref m_Velocity, m_MovementSmoothing);
 
-				if (m_wasCrouching)
-				{
-					m_wasCrouching = false;
-					OnCrouchEvent.Invoke(false);
-				}
-			}
+            // Als de speler naar rechts beweegt en de speler kijkt naar links...
+            if (move > 0 && !m_FacingRight)
+            {
+                // Draai de speler om
+                Flip();
+            }
+            // Als de speler naar links beweegt en de speler kijkt naar rechts...
+            else if (move < 0 && m_FacingRight)
+            {
+                // Draai de speler om
+                Flip();
+            }
+        }
 
-			// Move the character by finding the target velocity
-			Vector3 targetVelocity = new Vector2(move * 10f, m_Rigidbody2D.linearVelocity.y);
-			// And then smoothing it out and applying it to the character
-			m_Rigidbody2D.linearVelocity = Vector3.SmoothDamp(m_Rigidbody2D.linearVelocity, targetVelocity, ref m_Velocity, m_MovementSmoothing);
+        // Als de speler wil springen
+        if (m_Grounded && jump)
+        {
+            // Voeg verticale kracht toe om de speler te laten springen
+            m_Grounded = false;
+            m_Rigidbody2D.AddForce(new Vector2(0f, m_JumpForce));
+        }
+    }
 
-			// If the input is moving the player right and the player is facing left...
-			if (move > 0 && !m_FacingRight)
-			{
-				// ... flip the player.
-				Flip();
-			}
-			// Otherwise if the input is moving the player left and the player is facing right...
-			else if (move < 0 && m_FacingRight)
-			{
-				// ... flip the player.
-				Flip();
-			}
-		}
-		// If the player should jump...
-		if (m_Grounded && jump)
-		{
-			// Add a vertical force to the player.
-			m_Grounded = false;
-			m_Rigidbody2D.AddForce(new Vector2(0f, m_JumpForce));
-		}
-	}
+    private void Flip()
+    {
+        // Wissel de kant waarop de speler wordt weergegeven
+        m_FacingRight = !m_FacingRight;
 
-
-	private void Flip()
-	{
-		// Switch the way the player is labelled as facing.
-		m_FacingRight = !m_FacingRight;
-
-		// Multiply the player's x local scale by -1.
-		Vector3 theScale = transform.localScale;
-		theScale.x *= -1;
-		transform.localScale = theScale;
-	}
+        // Verander de x-schaal van de speler met -1
+        Vector3 theScale = transform.localScale;
+        theScale.x *= -1;
+        transform.localScale = theScale;
+    }
 }

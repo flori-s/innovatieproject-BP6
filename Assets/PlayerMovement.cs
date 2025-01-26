@@ -2,35 +2,35 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    public CharacterController2D controller; // Reference to CharacterController2D
-    public float runSpeed = 40f;             // Movement speed
-    private float m_HorizontalMove = 0f;     // Horizontal input
-    private bool m_Jump = false;             // Jump input
-    private bool m_Crouch = false;           // Crouch input
+    public CharacterController2D controller; // Verwijzing naar de CharacterController2D
+    public float runSpeed = 40f;             // Bewegsnelheid
+    private float m_HorizontalMove = 0f;     // Horizontale input
+    private bool m_Jump = false;             // Springinvoer
+    private bool m_Crouch = false;           // Kruipen invoer
 
-    // Update is called once per frame
+    // Update wordt één keer per frame aangeroepen
     void Update()
     {
-        // Get horizontal input (-1 for left, 1 for right, 0 for no input)
+        // Haal horizontale input op (-1 voor links, 1 voor rechts, 0 voor geen input)
         m_HorizontalMove = Input.GetAxisRaw("Horizontal") * runSpeed;
 
-        // Check if the jump button (default: spacebar) is pressed
+        // Controleer of de sprongknop (standaard: spatiebalk) is ingedrukt
         if (Input.GetButtonDown("Jump"))
         {
             m_Jump = true;
         }
 
-        // Check if the crouch button (default: left control) is held
+        // Controleer of de kruipknop (standaard: linker Ctrl) ingedrukt wordt
         m_Crouch = Input.GetKey(KeyCode.LeftControl);
     }
 
-    // FixedUpdate is called at a fixed interval (used for physics)
+    // FixedUpdate wordt op een vast interval aangeroepen (gebruikt voor fysica)
     void FixedUpdate()
     {
-        // Pass the input to the CharacterController2D script
+        // Geef de input door aan de CharacterController2D script
         controller.Move(m_HorizontalMove * Time.fixedDeltaTime, m_Crouch, m_Jump);
 
-        // Reset the jump flag for the next frame
+        // Zet de springvlag terug voor de volgende frame
         m_Jump = false;
     }
 }
